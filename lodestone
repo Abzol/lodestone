@@ -1,0 +1,72 @@
+#!/usr/bin/python
+from bs4 import BeautifulSoup
+import requests
+from argparse import ArgumentParser
+import math
+
+
+def print_items(soup):
+    names = []
+    levels = []
+    weapon = soup.find("p", class_="db-tooltip__item__category").string
+    job = weapon.split("'")[0]
+
+    for item in soup.find_all("h2", class_="db-tooltip__item__name"):
+        names.append(str(item.string))
+
+    for level in soup.find_all("div", class_="db-tooltip__item__level"):
+        levels.append(int(level.string.split()[2]))
+    
+    items = list(zip(names, levels)) #tuples!
+    items = items[int(len(items) / 2):] #every item appears twice in soup
+
+    if (items[-1][0].startswith("Soul of the ")):
+            items = items[:-1] #and we dont care for eventual souls
+    pad = max(len(s[0]) for s in items)
+
+    if (job == "Paladin"):
+        total = 0 
+    else:
+        total = items[0][1] #for any non-paladin, weapon counts twice
+    for item in items:
+        print(item[0].ljust(pad) + " | " + str(item[1]))
+        total += item[1]
+
+    print(" " * (pad + 3), end='') #pad average item level
+    if (job == "Paladin"):
+        print(math.floor(total / (len(items))))
+    else:
+        print(math.floor(total / (len(items) + 1)))
+
+BASEURL = "http://na.finalfantasyxiv.com"
+
+if __name__ == "__main__":
+    parser = ArgumentParser(description='Post FFXIV Lodestone stats')
+    parser.add_argument('name', nargs='*', help="Character name")
+    parser.add_argument('-w', '--world', default="", help='World')
+    args = parser.parse_args()
+
+    name = "+".join(args.name[0:2])
+    world = args.world.capitalize()
+    
+    r = requests.get(BASEURL
+                     + "/lodestone/character/?q="
+                     + name
+                     + "&worldname="
+                     + world)
+    soup = BeautifulSoup(r.text, "html.parser")
+    chars = []
+    for h4 in soup.find_all("h4", class_="player_name_gold"):
+        href = h4.a.get("href") #get is required because href isnt a child
+        string = h4.a.string
+        chars.append((string, href)) #tuple!
+
+    for char in chars:
+        if(char[0] == " ".join(name.split("+")).title()):
+            r = requests.get(BASEURL + char[1])
+            break
+    
+    soup = BeautifulSoup(r.text, "html.parser")
+    print(" ".join(name.split("+")).title())
+    print(" ")
+    print_items(soup)
