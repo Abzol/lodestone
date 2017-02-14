@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 from bs4 import BeautifulSoup
 import requests
 from argparse import ArgumentParser
@@ -12,7 +13,7 @@ def print_items(soup):
     job = weapon.split("'")[0]
 
     for item in soup.find_all("h2", class_="db-tooltip__item__name"):
-        names.append(str(item.string))
+        names.append(str(item.contents[0]))
 
     for level in soup.find_all("div", class_="db-tooltip__item__level"):
         levels.append(int(level.string.split()[2]))
